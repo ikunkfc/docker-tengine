@@ -1,0 +1,31 @@
+# Compiled binaries
+sender_v3
+receiver_v3
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+test_data/
+received/
+*.bin
+*.iso
+*.img
+
+# Go
+*.test
+*.out
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

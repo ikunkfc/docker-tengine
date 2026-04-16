@@ -1,0 +1,115 @@
+# Makefile for UDP File Transfer v3
+
+.PHONY: all build clean test run-receiver run-sender help
+
+# Build directories
+BUILD_DIR := build
+BIN_DIR := $(BUILD_DIR)/bin
+
+# Binary names
+SENDER := sender_v3
+RECEIVER := receiver_v3
+
+# Go build flags
+GOFLAGS := -ldflags="-s -w"
+
+all: build
+
+help:
+	@echo "UDP File Transfer v3 - Makefile Commands"
+	@echo ""
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@echo "  build         - Build sender and receiver"
+	@echo "  clean         - Remove build artifacts"
+	@echo "  test          - Run tests"
+	@echo "  run-receiver  - Run receiver (default port 9999)"
+	@echo "  run-sender    - Run sender (requires FILE= and TARGET= env vars)"
+	@echo "  install       - Install binaries to /usr/local/bin"
+	@echo "  uninstall     - Remove installed binaries"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make build"
+	@echo "  make run-receiver"
+	@echo "  make run-sender FILE=test.bin TARGET=localhost:9999"
+
+build: $(BIN_DIR)/$(SENDER) $(BIN_DIR)/$(RECEIVER)
+	@echo "✓ Build complete"
+
+$(BIN_DIR)/$(SENDER): sender_v3.go
+	@mkdir -p $(BIN_DIR)
+	@echo "Building $(SENDER)..."
+	@go build $(GOFLAGS) -o $(BIN_DIR)/$(SENDER) sender_v3.go
+	@echo "✓ $(SENDER) built successfully"
+
+$(BIN_DIR)/$(RECEIVER): receiver_v3.go
+	@mkdir -p $(BIN_DIR)
+	@echo "Building $(RECEIVER)..."
+	@go build $(GOFLAGS) -o $(BIN_DIR)/$(RECEIVER) receiver_v3.go
+	@echo "✓ $(RECEIVER) built successfully"
+
+clean:
+	@echo "Cleaning build artifacts..."
+	@rm -rf $(BUILD_DIR)
+	@echo "✓ Clean complete"
+
+test: build
+	@echo "Running tests..."
+	@mkdir -p test_data
+	@echo "Creating test file (10MB)..."
+	@dd if=/dev/urandom of=test_data/test_10mb.bin bs=1M count=10 2>/dev/null
+	@echo "✓ Test file created: test_data/test_10mb.bin"
+	@echo ""
+	@echo "To test:"
+	@echo "  Terminal 1: make run-receiver"
+	@echo "  Terminal 2: make run-sender FILE=test_data/test_10mb.bin TARGET=localhost:9999"
+
+run-receiver: build
+	@echo "Starting receiver..."
+	@mkdir -p received
+	@$(BIN_DIR)/$(RECEIVER) -output ./received
+
+run-sender: build
+ifndef FILE
+	@echo "Error: FILE environment variable not set"
+	@echo "Usage: make run-sender FILE=myfile.bin TARGET=localhost:9999"
+	@exit 1
+endif
+ifndef TARGET
+	@echo "Error: TARGET environment variable not set"
+	@echo "Usage: make run-sender FILE=myfile.bin TARGET=localhost:9999"
+	@exit 1
+endif
+	@echo "Starting sender..."
+	@$(BIN_DIR)/$(SENDER) -file $(FILE) -target $(TARGET)
+
+install: build
+	@echo "Installing binaries to /usr/local/bin..."
+	@sudo cp $(BIN_DIR)/$(SENDER) /usr/local/bin/
+	@sudo cp $(BIN_DIR)/$(RECEIVER) /usr/local/bin/
+	@sudo chmod +x /usr/local/bin/$(SENDER)
+	@sudo chmod +x /usr/local/bin/$(RECEIVER)
+	@echo "✓ Installation complete"
+	@echo ""
+	@echo "You can now run:"
+	@echo "  $(SENDER) -file myfile.bin -target host:port"
+	@echo "  $(RECEIVER) -port 9999"
+
+uninstall:
+	@echo "Removing installed binaries..."
+	@sudo rm -f /usr/local/bin/$(SENDER)
+	@sudo rm -f /usr/local/bin/$(RECEIVER)
+	@echo "✓ Uninstall complete"
+
+# Create test files of various sizes
+create-test-files:
+	@echo "Creating test files..."
+	@mkdir -p test_data
+	@dd if=/dev/urandom of=test_data/test_1mb.bin bs=1M count=1 2>/dev/null
+	@dd if=/dev/urandom of=test_data/test_10mb.bin bs=1M count=10 2>/dev/null
+	@dd if=/dev/urandom of=test_data/test_100mb.bin bs=1M count=100 2>/dev/null
+	@echo "✓ Test files created in test_data/"
+	@ls -lh test_data/
+
+.DEFAULT_GOAL := help
